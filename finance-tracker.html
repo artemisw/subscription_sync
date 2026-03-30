@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>財務紀錄</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0f0f0f; --surface:#1a1a1a; --s2:#212121; --s3:#2a2a2a;
+  --border:#2e2e2e; --border2:#404040;
+  --text:#f0ede8; --t2:#888; --t3:#444;
+  --accent:#e8c547; --adim:rgba(232,197,71,.13); --adark:#b8971f;
+  --green:#4caf7d; --gdim:rgba(76,175,125,.12);
+  --red:#e05555; --rdim:rgba(224,85,85,.1);
+  --blue:#5b9cf6; --bdim:rgba(91,156,246,.12);
+  --r:8px; --rl:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ── Nav ── */
+nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(15,15,15,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;
+  padding:0 1.25rem;
+  height:52px;
+  gap:0;
+}
+.nav-brand{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:.72rem;font-weight:500;
+  letter-spacing:.1em;color:var(--accent);
+  text-transform:uppercase;
+  margin-right:auto;
+}
+.nav-tab{
+  font-size:.8rem;font-weight:500;
+  padding:0 1.1rem;height:52px;
+  display:flex;align-items:center;
+  border:none;background:none;
+  color:var(--t2);cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all .15s;
+  font-family:'Noto Sans TC',sans-serif;
+}
+.nav-tab:hover{color:var(--text);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* ── Pages ── */
+.page{display:none;padding:2rem 1rem 4rem;max-width:600px;margin:0 auto;}
+.page.active{display:block;}
+
+/* ── Auth bar ── */
+.auth-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 13px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);margin-bottom:.85rem;
+}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:background .3s;}
+.dot.ok{background:var(--green);box-shadow:0 0 6px rgba(76,175,125,.5);}
+.dot.err{background:var(--red);}
+.auth-label{flex:1;font-size:.78rem;color:var(--t2);font-family:'IBM Plex Mono',monospace;}
+.auth-label b{color:var(--text);font-weight:500;}
+.auth-btn{
+  font-size:.72rem;font-family:'IBM Plex Mono',monospace;font-weight:500;
+  padding:5px 11px;border-radius:5px;
+  border:1px solid var(--border2);background:var(--s2);color:var(--t2);
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.auth-btn:hover{border-color:var(--accent);color:var(--accent);}
+.auth-btn.pri{background:var(--adim);border-color:var(--accent);color:var(--accent);}
+.auth-btn.pri:hover{background:var(--accent);color:#000;}
+
+/* ── Panel ── */
+.panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1.25rem;margin-bottom:.85rem;
+}
+.panel-label{
+  font-size:.65rem;font-weight:500;color:var(--t3);
+  text-transform:uppercase;letter-spacing:.1em;
+  font-family:'IBM Plex Mono',monospace;margin-bottom:12px;
+}
+
+/* ── Segment control ── */
+.seg{display:flex;gap:0;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:1.1rem;}
+.seg-btn{
+  flex:1;padding:9px 6px;background:var(--s2);color:var(--t2);
+  border:none;border-right:1px solid var(--border);
+  font-family:'Noto Sans TC',sans-serif;font-size:.82rem;
+  cursor:pointer;transition:all .15s;text-align:center;
+}
+.seg-btn:last-child{border-right:none;}
+.seg-btn.active{background:var(--adim);color:var(--accent);font-weight:500;}
+
+/* ── Fields ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin-bottom:9px;}
+.g1{margin-bottom:9px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+label{font-size:.69rem;font-weight:500;color:var(--t3);letter-spacing:.04em;font-family:'IBM Plex Mono',monospace;}
+input,select,textarea{
+  font-family:'Noto Sans TC',sans-serif;font-size:.87rem;
+  padding:9px 11px;background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--text);outline:none;
+  transition:border-color .15s,background .15s;width:100%;
+}
+input::placeholder,textarea::placeholder{color:var(--t3);}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);background:var(--s3);}
+select option{background:var(--s2);}
+textarea{resize:vertical;min-height:64px;}
+
+.row{display:flex;gap:7px;}
+.row input{flex:1;}
+
+/* ── Currency toggle ── */
+.cur-tog{display:flex;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;flex-shrink:0;}
+.cur-btn{
+  padding:9px 13px;background:var(--s2);color:var(--t3);border:none;
+  border-right:1px solid var(--border);
+  font-family:'IBM Plex Mono',monospace;font-size:.76rem;font-weight:500;
+  cursor:pointer;transition:all .15s;
+}
+.cur-btn:last-child{border-right:none;}
+.cur-btn.active{background:var(--adim);color:var(--accent);}
+
+/* ── Cycle toggle ── */
+.cyc-wrap{display:flex;gap:6px;}
+.cyc-btn{
+  flex:1;padding:8px 6px;background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r);color:var(--t2);
+  font-family:'Noto Sans TC',sans-serif;font-size:.8rem;
+  cursor:pointer;transition:all .15s;text-align:center;
+}
+.cyc-btn.active{background:var(--adim);border-color:var(--accent);color:var(--accent);font-weight:500;}
+
+/* ── Submit ── */
+.divider{height:1px;background:var(--border);margin:1.1rem 0 1rem;}
+.sub-btn{
+  width:100%;padding:12px;background:var(--accent);color:#000;
+  border:none;border-radius:var(--r);
+  font-family:'Noto Sans TC',sans-serif;font-size:.9rem;font-weight:700;
+  cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.sub-btn:hover{background:#f5d05a;}
+.sub-btn:active{transform:scale(.99);}
+.sub-btn:disabled{background:var(--s3);color:var(--t3);cursor:not-allowed;transform:none;}
+.spinner{width:15px;height:15px;border:2px solid rgba(0,0,0,.3);border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+.sub-btn.loading .spinner{display:block;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── Small btn ── */
+.sm-btn{
+  font-size:.7rem;font-family:'IBM Plex Mono',monospace;
+  padding:5px 10px;border-radius:5px;
+  border:1px solid var(--border);background:var(--s2);color:var(--t3);
+  cursor:pointer;transition:all .15s;
+}
+.sm-btn:hover{color:var(--t2);border-color:var(--border2);}
+
+/* ── Recent list ── */
+.recent-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+.recent-list{display:flex;flex-direction:column;gap:6px;}
+.entry-row{
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;
+  padding:10px 13px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);animation:slideIn .22s ease both;
+}
+@keyframes slideIn{from{opacity:0;transform:translateX(-7px);}to{opacity:1;transform:translateX(0);}}
+.entry-tag{
+  font-size:.65rem;font-family:'IBM Plex Mono',monospace;
+  padding:2px 7px;border-radius:100px;
+  display:inline-block;margin-left:6px;vertical-align:middle;
+}
+.tag-sub{background:var(--adim);color:var(--accent);border:1px solid rgba(232,197,71,.25);}
+.tag-inc{background:var(--gdim);color:var(--green);border:1px solid rgba(76,175,125,.25);}
+.tag-exp{background:var(--rdim);color:var(--red);border:1px solid rgba(224,85,85,.2);}
+.entry-name{font-size:.87rem;font-weight:500;color:var(--text);}
+.entry-meta{font-size:.71rem;color:var(--t3);font-family:'IBM Plex Mono',monospace;margin-top:2px;}
+.entry-right{text-align:right;}
+.entry-amount{font-family:'IBM Plex Mono',monospace;font-size:.9rem;font-weight:500;}
+.amount-pos{color:var(--green);}
+.amount-neg{color:var(--red);}
+.amount-sub{color:var(--accent);}
+.entry-cycle{font-size:.66rem;color:var(--t3);font-family:'IBM Plex Mono',monospace;}
+
+/* ── Report page ── */
+.month-sel{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:1.25rem;
+}
+.month-sel input[type=month]{
+  flex:1;font-family:'IBM Plex Mono',monospace;font-size:.85rem;
+}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem;}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--rl);padding:1rem;text-align:center;
+}
+.stat-label{font-size:.65rem;color:var(--t3);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+.stat-value{font-family:'IBM Plex Mono',monospace;font-size:1.05rem;font-weight:500;}
+.stat-value.pos{color:var(--green);}
+.stat-value.neg{color:var(--red);}
+.stat-value.neu{color:var(--accent);}
+.stat-value.net-pos{color:var(--green);}
+.stat-value.net-neg{color:var(--red);}
+
+.report-section{margin-bottom:1.1rem;}
+.report-section-hd{
+  font-size:.65rem;font-family:'IBM Plex Mono',monospace;color:var(--t3);
+  text-transform:uppercase;letter-spacing:.1em;
+  padding:0 0 8px;border-bottom:1px solid var(--border);
+  margin-bottom:8px;
+  display:flex;justify-content:space-between;
+}
+.report-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--border);
+  font-size:.83rem;
+}
+.report-row:last-child{border-bottom:none;}
+.report-row-left{color:var(--t2);}
+.report-row-right{font-family:'IBM Plex Mono',monospace;font-weight:500;}
+
+.empty-state{
+  text-align:center;padding:2.5rem 1rem;
+  font-size:.82rem;color:var(--t3);
+  font-family:'IBM Plex Mono',monospace;
+}
+
+.load-btn{
+  width:100%;padding:10px;
+  background:var(--adim);border:1px solid rgba(232,197,71,.25);
+  border-radius:var(--r);color:var(--accent);
+  font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:500;
+  cursor:pointer;transition:all .15s;margin-bottom:.85rem;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.load-btn:hover{background:var(--accent);color:#000;}
+.load-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ── Calendar badge ── */
+.cal-badge{
+  font-size:.68rem;font-family:'IBM Plex Mono',monospace;
+  padding:2px 8px;border-radius:100px;
+  background:var(--bdim);color:var(--blue);
+  border:1px solid rgba(91,156,246,.2);
+  display:inline-block;margin-left:5px;vertical-align:middle;
+}
+
+/* ── Toast ── */
+.toast{
+  position:fixed;bottom:20px;left:50%;
+  transform:translateX(-50%) translateY(8px);
+  padding:10px 18px;border-radius:var(--r);
+  font-size:.8rem;font-family:'IBM Plex Mono',monospace;
+  opacity:0;transition:all .2s;pointer-events:none;white-space:nowrap;z-index:999;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{background:var(--gdim);color:var(--green);border:1px solid rgba(76,175,125,.3);}
+.toast.error{background:var(--rdim);color:var(--red);border:1px solid rgba(224,85,85,.2);}
+.toast.info{background:var(--bdim);color:var(--blue);border:1px solid rgba(91,156,246,.2);}
+
+a{color:var(--accent);text-decoration:none;}
+a:hover{text-decoration:underline;}
+code{font-family:'IBM Plex Mono',monospace;font-size:.73rem;background:var(--s3);padding:2px 6px;border-radius:4px;color:var(--accent);word-break:break-all;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">財務紀錄</span>
+  <button class="nav-tab active" onclick="switchPage('input')">輸入</button>
+  <button class="nav-tab" onclick="switchPage('report')">月報表</button>
+  <button class="nav-tab" onclick="switchPage('config')">設定</button>
+</nav>
+
+<!-- ════════════════════════════════════════════
+     PAGE: INPUT
+════════════════════════════════════════════ -->
+<div class="page active" id="page-input">
+
+  <!-- Auth bars -->
+  <div class="auth-bar">
+    <div class="dot" id="sheetDot"></div>
+    <span class="auth-label" id="sheetLabel">未連接 Google Sheets</span>
+    <button class="auth-btn pri" id="sheetAuthBtn" onclick="authSheets()">登入 Sheets</button>
+  </div>
+  <div class="auth-bar">
+    <div class="dot" id="calDot"></div>
+    <span class="auth-label" id="calLabel">未連接 Google Calendar</span>
+    <button class="auth-btn pri" id="calAuthBtn" onclick="authCalendar()">登入 Calendar</button>
+  </div>
+
+  <!-- Type selector -->
+  <div class="panel">
+    <div class="seg">
+      <button class="seg-btn active" onclick="setType('subscription',this)">訂閱支出</button>
+      <button class="seg-btn" onclick="setType('expense',this)">其他支出</button>
+      <button class="seg-btn" onclick="setType('income',this)">收入</button>
+    </div>
+
+    <!-- ── 訂閱支出 ── -->
+    <div id="form-subscription">
+      <div class="g2">
+        <div class="field"><label>項目名稱</label><input type="text" id="s-name" placeholder="Claude Pro"/></div>
+        <div class="field"><label>公司</label><input type="text" id="s-company" placeholder="Anthropic"/></div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>扣款日（MM/DD）</label><input type="text" id="s-date" placeholder="03/21" maxlength="5" oninput="fmtDate(this)"/></div>
+        <div class="field">
+          <label>金額</label>
+          <div class="row">
+            <input type="number" id="s-amount" placeholder="20" min="0" step="0.01"/>
+            <div class="cur-tog">
+              <button class="cur-btn active" data-cur="USD" onclick="setCur(this,'s')">USD</button>
+              <button class="cur-btn" data-cur="TWD" onclick="setCur(this,'s')">TWD</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="g1 field"><label>信用卡</label>
+        <input type="text" id="s-card" placeholder="國泰 Cube" list="card-dl"/>
+      </div>
+      <div class="g1 field"><label>繳費週期</label>
+        <div class="cyc-wrap">
+          <button class="cyc-btn active" onclick="setCycle('月繳',this)">月繳</button>
+          <button class="cyc-btn" onclick="setCycle('年繳',this)">年繳</button>
+          <button class="cyc-btn" onclick="setCycle('季繳',this)">季繳</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 其他支出 ── -->
+    <div id="form-expense" style="display:none">
+      <div class="g2">
+        <div class="field"><label>項目名稱</label><input type="text" id="e-name" placeholder="晚餐"/></div>
+        <div class="field"><label>日期（MM/DD）</label><input type="text" id="e-date" placeholder="03/21" maxlength="5" oninput="fmtDate(this)"/></div>
+      </div>
+      <div class="g1 field">
+        <label>金額</label>
+        <div class="row">
+          <input type="number" id="e-amount" placeholder="350" min="0" step="1"/>
+          <div class="cur-tog">
+            <button class="cur-btn active" data-cur="TWD" onclick="setCur(this,'e')">TWD</button>
+            <button class="cur-btn" data-cur="USD" onclick="setCur(this,'e')">USD</button>
+          </div>
+        </div>
+      </div>
+      <div class="g1 field"><label>備註（選填）</label><textarea id="e-note" placeholder="例：跟同事聚餐"></textarea></div>
+    </div>
+
+    <!-- ── 收入 ── -->
+    <div id="form-income" style="display:none">
+      <div class="g2">
+        <div class="field"><label>來源</label><input type="text" id="i-source" placeholder="BigObject Inc."/></div>
+        <div class="field"><label>類別</label>
+          <select id="i-category">
+            <option value="薪水">薪水</option>
+            <option value="獎金">獎金</option>
+            <option value="接案">接案</option>
+            <option value="投資">投資</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field"><label>日期（MM/DD）</label><input type="text" id="i-date" placeholder="03/05" maxlength="5" oninput="fmtDate(this)"/></div>
+        <div class="field">
+          <label>金額</label>
+          <div class="row">
+            <input type="number" id="i-amount" placeholder="75000" min="0" step="1"/>
+            <div class="cur-tog">
+              <button class="cur-btn active" data-cur="TWD" onclick="setCur(this,'i')">TWD</button>
+              <button class="cur-btn" data-cur="USD" onclick="setCur(this,'i')">USD</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="g1 field"><label>備註（選填）</label><textarea id="i-note" placeholder="例：3月薪資"></textarea></div>
+    </div>
+
+    <div class="divider"></div>
+    <button class="sub-btn" id="submitBtn" onclick="submitEntry()">
+      <div class="spinner"></div>
+      <span id="submitLabel">寫入 Google Sheet</span>
+    </button>
+  </div>
+
+  <!-- Recent -->
+  <div id="recentSection" style="display:none">
+    <div class="recent-hd">
+      <span class="panel-label" style="margin:0">本次已新增</span>
+      <button class="sm-btn" onclick="clearRecent()">清除</button>
+    </div>
+    <div class="recent-list" id="recentList"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PAGE: REPORT
+════════════════════════════════════════════ -->
+<div class="page" id="page-report">
+  <div class="auth-bar" style="margin-bottom:.85rem;">
+    <div class="dot" id="rSheetDot"></div>
+    <span class="auth-label" id="rSheetLabel">需要先在「設定」連接 Sheets</span>
+  </div>
+
+  <div class="panel">
+    <p class="panel-label">選擇月份</p>
+    <div class="month-sel">
+      <input type="month" id="monthPicker"/>
+      <button class="load-btn" style="width:auto;padding:9px 18px;margin:0;" onclick="loadReport()">
+        <span id="loadLabel">載入報表</span>
+        <div class="spinner" id="loadSpinner" style="border-top-color:var(--accent);border-color:rgba(232,197,71,.3);"></div>
+      </button>
+    </div>
+  </div>
+
+  <div id="reportContent" style="display:none">
+    <!-- Summary cards -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">收入</div>
+        <div class="stat-value pos" id="rIncome">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">支出</div>
+        <div class="stat-value neg" id="rExpense">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">結餘</div>
+        <div class="stat-value neu" id="rNet">—</div>
+      </div>
+    </div>
+
+    <!-- Income breakdown -->
+    <div class="report-section" id="incomeSection">
+      <div class="report-section-hd">
+        <span>收入明細</span><span id="incomeTotal" style="color:var(--green)"></span>
+      </div>
+      <div id="incomeRows"></div>
+    </div>
+
+    <!-- Subscription breakdown -->
+    <div class="report-section" id="subSection">
+      <div class="report-section-hd">
+        <span>訂閱支出</span><span id="subTotal" style="color:var(--accent)"></span>
+      </div>
+      <div id="subRows"></div>
+    </div>
+
+    <!-- Expense breakdown -->
+    <div class="report-section" id="expSection">
+      <div class="report-section-hd">
+        <span>其他支出</span><span id="expTotal" style="color:var(--red)"></span>
+      </div>
+      <div id="expRows"></div>
+    </div>
+  </div>
+
+  <div id="reportEmpty" class="empty-state">選擇月份後按「載入報表」</div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PAGE: CONFIG
+════════════════════════════════════════════ -->
+<div class="page" id="page-config">
+  <div class="panel">
+    <p class="panel-label">OAuth 設定說明</p>
+    <div style="font-size:.78rem;color:var(--t2);line-height:1.8;">
+      <p style="margin-bottom:10px;">需要一個同時開啟 <code>Google Sheets API</code> 和 <code>Google Calendar API</code> 的 OAuth Client ID。</p>
+      <p style="margin-bottom:4px;color:var(--t3);font-family:'IBM Plex Mono',monospace;font-size:.68rem;letter-spacing:.05em;">STEPS</p>
+      <ol style="padding-left:1.2rem;display:flex;flex-direction:column;gap:6px;">
+        <li><a href="https://console.cloud.google.com" target="_blank">Cloud Console</a> → 新專案 → 啟用 <code>Sheets API</code> 與 <code>Calendar API</code></li>
+        <li>憑證 → OAuth 2.0 用戶端 ID → Web application → Authorized origins 加入 <code id="cfgOrigin"></code></li>
+        <li>取得 Client ID 填入下方，再填 Sheet ID 與工作表名稱</li>
+        <li>回到「輸入」頁面，分別登入 Sheets 和 Calendar</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-label">連線設定</p>
+    <div class="g1 field"><label>OAuth Client ID</label>
+      <input type="text" id="cfg-clientId" placeholder="xxxxxx.apps.googleusercontent.com"/>
+    </div>
+    <div class="g1 field"><label>Google Sheet ID</label>
+      <input type="text" id="cfg-sheetId" placeholder="1BxiMVs0XRA5..."/>
+    </div>
+    <div class="g1 field"><label>工作表名稱（預設 Sheet1）</label>
+      <input type="text" id="cfg-sheetName" placeholder="Sheet1"/>
+    </div>
+    <div class="divider"></div>
+    <button class="sub-btn" onclick="saveConfig()">儲存設定</button>
+  </div>
+
+  <div class="panel">
+    <p class="panel-label">連線狀態</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div class="auth-bar" style="margin:0">
+        <div class="dot" id="cfg-sheetDot"></div>
+        <span class="auth-label" id="cfg-sheetLabel">Google Sheets</span>
+        <button class="auth-btn pri" id="cfg-sheetBtn" onclick="authSheets()">登入</button>
+      </div>
+      <div class="auth-bar" style="margin:0">
+        <div class="dot" id="cfg-calDot"></div>
+        <span class="auth-label" id="cfg-calLabel">Google Calendar</span>
+        <button class="auth-btn pri" id="cfg-calBtn" onclick="authCalendar()">登入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<datalist id="card-dl">
+  <option value="國泰 Cube">
+  <option value="玉山 Pi">
+  <option value="台新 Richart">
+  <option value="中信 icash">
+  <option value="永豐幣倍卡">
+  <option value="花旗現金回饋">
+</datalist>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+// ── State ────────────────────────────────────────────────
+let sheetsToken = null;
+let calToken    = null;
+let currentType = 'subscription';
+let curSuffix   = { s:'USD', e:'TWD', i:'TWD' };
+let selectedCycle = '月繳';
+let recentEntries = [];
+
+const SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+const CAL_SCOPE    = 'https://www.googleapis.com/auth/calendar.events';
+
+// ── Init ────────────────────────────────────────────────
+document.getElementById('cfgOrigin').textContent = location.origin;
+document.getElementById('cfg-clientId').value = location.origin; // placeholder fix
+
+;(function init(){
+  const fields = ['clientId','sheetId','sheetName'];
+  fields.forEach(k => {
+    const v = localStorage.getItem('ft_'+k);
+    if(v) { document.getElementById('cfg-'+k).value = v; }
+  });
+
+  const st = sessionStorage.getItem('ft_sheetsToken');
+  const ct = sessionStorage.getItem('ft_calToken');
+  if(st){ sheetsToken = st; setSheetsState('ok'); }
+  if(ct){ calToken    = ct; setCalState('ok'); }
+
+  // Set month picker to current month
+  const now = new Date();
+  document.getElementById('monthPicker').value =
+    now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+})();
+
+// ── Page nav ────────────────────────────────────────────
+function switchPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  syncReportAuth();
+}
+
+function syncReportAuth(){
+  const dot   = document.getElementById('rSheetDot');
+  const label = document.getElementById('rSheetLabel');
+  if(sheetsToken){ dot.className='dot ok'; label.innerHTML='已連接 <b>Google Sheets</b>'; }
+  else { dot.className='dot'; label.textContent='需要先連接 Sheets（請到設定頁面）'; }
+}
+
+// ── Config ──────────────────────────────────────────────
+function saveConfig(){
+  ['clientId','sheetId','sheetName'].forEach(k=>{
+    const v = document.getElementById('cfg-'+k).value.trim();
+    if(v) localStorage.setItem('ft_'+k, v);
+  });
+  showToast('設定已儲存', 'success');
+}
+
+function cfg(k){ return localStorage.getItem('ft_'+k) || ''; }
+
+// ── Auth ────────────────────────────────────────────────
+function getClientId(){
+  const v = document.getElementById('cfg-clientId').value.trim() || cfg('clientId');
+  if(!v){ showToast('請先到「設定」填入 Client ID', 'error'); return null; }
+  return v;
+}
+
+function authSheets(){
+  if(sheetsToken){ sheetsToken=null; sessionStorage.removeItem('ft_sheetsToken'); setSheetsState('off'); showToast('Sheets 已登出','success'); return; }
+  const cid = getClientId(); if(!cid) return;
+  google.accounts.oauth2.initTokenClient({
+    client_id: cid, scope: SHEETS_SCOPE,
+    callback: r => {
+      if(r.error){ setSheetsState('err'); showToast('Sheets 授權失敗：'+r.error,'error'); return; }
+      sheetsToken = r.access_token;
+      sessionStorage.setItem('ft_sheetsToken', sheetsToken);
+      setSheetsState('ok'); showToast('Sheets 登入成功','success');
+    }
+  }).requestAccessToken();
+}
+
+function authCalendar(){
+  if(calToken){ calToken=null; sessionStorage.removeItem('ft_calToken'); setCalState('off'); showToast('Calendar 已登出','success'); return; }
+  const cid = getClientId(); if(!cid) return;
+  google.accounts.oauth2.initTokenClient({
+    client_id: cid, scope: CAL_SCOPE,
+    callback: r => {
+      if(r.error){ setCalState('err'); showToast('Calendar 授權失敗：'+r.error,'error'); return; }
+      calToken = r.access_token;
+      sessionStorage.setItem('ft_calToken', calToken);
+      setCalState('ok'); showToast('Calendar 登入成功','success');
+    }
+  }).requestAccessToken();
+}
+
+function setSheetsState(s){
+  const states = {
+    ok:  { cls:'dot ok',  label:'已連接 <b>Google Sheets</b>', btn:'登出', btnCls:'auth-btn' },
+    err: { cls:'dot err', label:'授權失敗，請重試',             btn:'重新登入', btnCls:'auth-btn pri' },
+    off: { cls:'dot',     label:'未連接 Google Sheets',        btn:'登入 Sheets', btnCls:'auth-btn pri' }
+  };
+  const st = states[s] || states.off;
+  ['','cfg-'].forEach(prefix=>{
+    const dot = document.getElementById(prefix+'sheetDot');
+    const lbl = document.getElementById(prefix+'sheetLabel');
+    const btn = document.getElementById(prefix+'sheetAuthBtn') || document.getElementById(prefix+'sheetBtn');
+    if(dot) dot.className = st.cls;
+    if(lbl) lbl.innerHTML = st.label;
+    if(btn){ btn.textContent = st.btn; btn.className = st.btnCls; }
+  });
+  syncReportAuth();
+}
+
+function setCalState(s){
+  const states = {
+    ok:  { cls:'dot ok',  label:'已連接 <b>Google Calendar</b>', btn:'登出', btnCls:'auth-btn' },
+    err: { cls:'dot err', label:'授權失敗，請重試',               btn:'重新登入', btnCls:'auth-btn pri' },
+    off: { cls:'dot',     label:'未連接 Google Calendar',        btn:'登入 Calendar', btnCls:'auth-btn pri' }
+  };
+  const st = states[s] || states.off;
+  ['','cfg-'].forEach(prefix=>{
+    const dot = document.getElementById(prefix+'calDot');
+    const lbl = document.getElementById(prefix+'calLabel');
+    const btn = document.getElementById(prefix+'calAuthBtn') || document.getElementById(prefix+'calBtn');
+    if(dot) dot.className = st.cls;
+    if(lbl) lbl.innerHTML = st.label;
+    if(btn){ btn.textContent = st.btn; btn.className = st.btnCls; }
+  });
+}
+
+// ── Form helpers ────────────────────────────────────────
+function setType(type, btn){
+  currentType = type;
+  document.querySelectorAll('.seg-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['subscription','expense','income'].forEach(t=>{
+    document.getElementById('form-'+t).style.display = (t===type)?'':'none';
+  });
+  document.getElementById('submitLabel').textContent = type==='income' ? '記錄收入' : type==='expense' ? '記錄支出' : '寫入 Google Sheet';
+}
+
+function fmtDate(el){
+  let v = el.value.replace(/\D/g,'');
+  if(v.length>=3) v = v.slice(0,2)+'/'+v.slice(2,4);
+  el.value = v;
+}
+
+function setCur(btn, pfx){
+  btn.closest('.cur-tog').querySelectorAll('.cur-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  curSuffix[pfx] = btn.dataset.cur;
+}
+
+function setCycle(val, btn){
+  selectedCycle = val;
+  document.querySelectorAll('.cyc-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Submit ──────────────────────────────────────────────
+async function submitEntry(){
+  if(!sheetsToken){ showToast('請先登入 Google Sheets','error'); return; }
+
+  const sheetId   = cfg('sheetId');
+  const sheetName = cfg('sheetName') || 'Sheet1';
+  if(!sheetId){ showToast('請先在設定填入 Sheet ID','error'); return; }
+
+  let row, entry, calEntry = null;
+
+  if(currentType === 'subscription'){
+    const name    = document.getElementById('s-name').value.trim();
+    const company = document.getElementById('s-company').value.trim();
+    const date    = document.getElementById('s-date').value.trim();
+    const amount  = document.getElementById('s-amount').value.trim();
+    const card    = document.getElementById('s-card').value.trim();
+    if(!name||!company||!date||!amount||!card){ showToast('請填寫所有欄位','error'); return; }
+    const now = new Date().toLocaleString('zh-TW',{hour12:false});
+    row = [name, company, date, parseFloat(amount), curSuffix.s, card, selectedCycle, now, '訂閱'];
+    entry = { type:'subscription', name, company, date, amount:parseFloat(amount), currency:curSuffix.s, card, cycle:selectedCycle };
+    // Calendar reminder data
+    calEntry = { name, company, date, amount:parseFloat(amount), currency:curSuffix.s, cycle:selectedCycle };
+
+  } else if(currentType === 'expense'){
+    const name   = document.getElementById('e-name').value.trim();
+    const date   = document.getElementById('e-date').value.trim();
+    const amount = document.getElementById('e-amount').value.trim();
+    const note   = document.getElementById('e-note').value.trim();
+    if(!name||!date||!amount){ showToast('請填寫必填欄位','error'); return; }
+    const now = new Date().toLocaleString('zh-TW',{hour12:false});
+    row = [name, '', date, parseFloat(amount), curSuffix.e, '', '', now, '其他支出', note];
+    entry = { type:'expense', name, date, amount:parseFloat(amount), currency:curSuffix.e, note };
+
+  } else {
+    const source   = document.getElementById('i-source').value.trim();
+    const category = document.getElementById('i-category').value;
+    const date     = document.getElementById('i-date').value.trim();
+    const amount   = document.getElementById('i-amount').value.trim();
+    const note     = document.getElementById('i-note').value.trim();
+    if(!source||!date||!amount){ showToast('請填寫必填欄位','error'); return; }
+    const now = new Date().toLocaleString('zh-TW',{hour12:false});
+    row = [source, category, date, parseFloat(amount), curSuffix.i, '', '', now, '收入', note];
+    entry = { type:'income', name:source, category, date, amount:parseFloat(amount), currency:curSuffix.i, note };
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.classList.add('loading'); btn.disabled = true;
+
+  // 1. Write to Sheets
+  await ensureHeader(sheetId, sheetName);
+  const ok = await appendRow(sheetId, sheetName, row);
+
+  if(ok){
+    // 2. Calendar reminders for subscriptions
+    if(calEntry && calToken){
+      await createCalReminders(calEntry);
+    }
+    addRecent(entry);
+    clearForms();
+    const calMsg = (calEntry && calToken) ? ' + 行事曆提醒已建立' : '';
+    showToast('✓ 已寫入 Google Sheet' + calMsg, 'success');
+  }
+
+  btn.classList.remove('loading'); btn.disabled = false;
+}
+
+// ── Sheets helpers ──────────────────────────────────────
+const HEADERS = ['項目名稱/來源','公司/類別','日期','金額','幣別','信用卡','週期','新增時間','類型','備註'];
+
+async function ensureHeader(sid, sname){
+  try {
+    const r = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(sname+'!A1')}`,
+      { headers:{ Authorization:'Bearer '+sheetsToken } }
+    );
+    const d = await r.json();
+    if(!d.values){
+      await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(sname+'!A1:J1')}?valueInputOption=USER_ENTERED`,
+        { method:'PUT', headers:{Authorization:'Bearer '+sheetsToken,'Content-Type':'application/json'},
+          body: JSON.stringify({ values:[HEADERS] }) }
+      );
+    }
+  } catch(e){}
+}
+
+async function appendRow(sid, sname, row){
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(sname)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+      { method:'POST', headers:{Authorization:'Bearer '+sheetsToken,'Content-Type':'application/json'},
+        body: JSON.stringify({ values:[row] }) }
+    );
+    if(res.status===401){ sheetsToken=null; sessionStorage.removeItem('ft_sheetsToken'); setSheetsState('err'); showToast('Sheets 授權過期，請重新登入','error'); return false; }
+    if(!res.ok){ const e=await res.json(); showToast('寫入失敗：'+(e.error?.message||res.status),'error'); return false; }
+    return true;
+  } catch(e){ showToast('網路錯誤，請重試','error'); return false; }
+}
+
+// ── Calendar reminders ──────────────────────────────────
+async function createCalReminders(sub){
+  // Parse date — use current year; if month already passed use next year
+  const [mm, dd] = sub.date.split('/').map(Number);
+  const now = new Date();
+  let year = now.getFullYear();
+  const eventDate = new Date(year, mm-1, dd);
+  if(eventDate < now) { year++; eventDate.setFullYear(year); }
+
+  const title = `💳 ${sub.name} 訂閱到期 (${sub.amount} ${sub.currency})`;
+  const desc  = `${sub.company} · ${sub.cycle}\n信用卡：${sub.card || '—'}`;
+
+  // Create event on the billing date
+  const mainEvent = buildCalEvent(title, desc, eventDate);
+  // Reminder 7 days before
+  const date7 = new Date(eventDate); date7.setDate(date7.getDate()-7);
+  const event7 = buildCalEvent(`⏰ 提醒：${sub.name} 7天後扣款`, desc, date7);
+  // Reminder 3 days before
+  const date3 = new Date(eventDate); date3.setDate(date3.getDate()-3);
+  const event3 = buildCalEvent(`⏰ 提醒：${sub.name} 3天後扣款`, desc, date3);
+
+  const eventsToCreate = [mainEvent, event7, event3].filter(e => {
+    const d = new Date(e.start.date);
+    return d >= new Date(now.toDateString()); // only future dates
+  });
+
+  for(const ev of eventsToCreate){
+    await createCalEvent(ev);
+  }
+}
+
+function buildCalEvent(title, desc, date){
+  const iso = date.toISOString().split('T')[0];
+  return {
+    summary: title,
+    description: desc,
+    start: { date: iso },
+    end:   { date: iso },
+    reminders: { useDefault: false, overrides: [{ method:'popup', minutes:480 }] }
+  };
+}
+
+async function createCalEvent(ev){
+  try {
+    const res = await fetch(
+      'https://www.googleapis.com/calendar/v3/calendars/primary/events',
+      { method:'POST', headers:{Authorization:'Bearer '+calToken,'Content-Type':'application/json'}, body:JSON.stringify(ev) }
+    );
+    if(res.status===401){ calToken=null; sessionStorage.removeItem('ft_calToken'); setCalState('err'); }
+  } catch(e){}
+}
+
+// ── Report ──────────────────────────────────────────────
+async function loadReport(){
+  if(!sheetsToken){ showToast('請先登入 Google Sheets','error'); return; }
+  const sid   = cfg('sheetId');
+  const sname = cfg('sheetName') || 'Sheet1';
+  if(!sid){ showToast('請先設定 Sheet ID','error'); return; }
+
+  const monthVal = document.getElementById('monthPicker').value; // YYYY-MM
+  if(!monthVal){ showToast('請選擇月份','error'); return; }
+  const [yr, mo] = monthVal.split('-');
+
+  const btn = document.getElementById('loadLabel');
+  const sp  = document.getElementById('loadSpinner');
+  btn.style.display='none'; sp.style.display='block';
+
+  try {
+    const res = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encodeURIComponent(sname)}`,
+      { headers:{ Authorization:'Bearer '+sheetsToken } }
+    );
+    if(!res.ok){ showToast('讀取失敗','error'); return; }
+    const data = await res.json();
+    const rows = (data.values || []).slice(1); // skip header
+
+    // Filter rows by month (col index 2 = 日期, col 7 = 新增時間, col 8 = 類型)
+    // Date format: MM/DD — match mo
+    const filtered = rows.filter(r => {
+      const dateStr = r[2] || '';
+      // Try to match from the 新增時間 column (col 7) for year
+      const ts = r[7] || '';
+      const rowYear  = ts ? ts.split('/')[0] : yr;
+      const rowMonth = dateStr.split('/')[0];
+      return rowYear === yr && rowMonth === mo;
+    });
+
+    renderReport(filtered, yr+'/'+mo);
+  } catch(e){ showToast('讀取失敗','error'); }
+  finally { btn.style.display=''; sp.style.display='none'; }
+}
+
+function renderReport(rows, label){
+  const inc = rows.filter(r=>r[8]==='收入');
+  const sub = rows.filter(r=>r[8]==='訂閱');
+  const exp = rows.filter(r=>r[8]==='其他支出');
+
+  // Simple sum (ignore currency conversion for now, group by currency)
+  const sumTWD = arr => arr.filter(r=>r[4]==='TWD').reduce((a,r)=>a+parseFloat(r[3]||0),0);
+  const sumUSD = arr => arr.filter(r=>r[4]==='USD').reduce((a,r)=>a+parseFloat(r[3]||0),0);
+
+  function fmtAmt(arr){
+    const parts=[];
+    const t=sumTWD(arr), u=sumUSD(arr);
+    if(t) parts.push('NT$'+t.toLocaleString());
+    if(u) parts.push('$'+u.toFixed(2));
+    return parts.join(' + ') || '—';
+  }
+
+  document.getElementById('rIncome').textContent  = fmtAmt(inc);
+  document.getElementById('rExpense').textContent = fmtAmt([...sub,...exp]);
+
+  // Net in TWD (USD×32 approx)
+  const netTWD = sumTWD(inc) - sumTWD([...sub,...exp]);
+  const netUSD = sumUSD(inc) - sumUSD([...sub,...exp]);
+  const netEl = document.getElementById('rNet');
+  const netStr = [netTWD?'NT$'+netTWD.toLocaleString():'', netUSD?'$'+netUSD.toFixed(2):''].filter(Boolean).join(' / ') || '—';
+  netEl.textContent = netStr;
+  netEl.className = 'stat-value '+(netTWD>=0&&netUSD>=0?'net-pos':'net-neg');
+
+  // Income rows
+  document.getElementById('incomeTotal').textContent = fmtAmt(inc);
+  document.getElementById('incomeRows').innerHTML = inc.length
+    ? inc.map(r=>`<div class="report-row"><span class="report-row-left">${r[0]} <span style="color:var(--t3);font-size:.72rem;">${r[1]||''}</span> <span style="color:var(--t3);font-size:.72rem;">${r[2]||''}</span></span><span class="report-row-right" style="color:var(--green)">+${parseFloat(r[3]).toLocaleString()} ${r[4]}</span></div>`).join('')
+    : '<div class="empty-state" style="padding:1rem;">本月無收入紀錄</div>';
+
+  // Sub rows
+  document.getElementById('subTotal').textContent = fmtAmt(sub);
+  document.getElementById('subRows').innerHTML = sub.length
+    ? sub.map(r=>`<div class="report-row"><span class="report-row-left">${r[0]} <span style="color:var(--t3);font-size:.72rem;">${r[2]||''} · ${r[6]||''}</span></span><span class="report-row-right" style="color:var(--accent)">-${parseFloat(r[3]).toLocaleString()} ${r[4]}</span></div>`).join('')
+    : '<div class="empty-state" style="padding:1rem;">本月無訂閱紀錄</div>';
+
+  // Exp rows
+  document.getElementById('expTotal').textContent = fmtAmt(exp);
+  document.getElementById('expRows').innerHTML = exp.length
+    ? exp.map(r=>`<div class="report-row"><span class="report-row-left">${r[0]} <span style="color:var(--t3);font-size:.72rem;">${r[2]||''}</span></span><span class="report-row-right" style="color:var(--red)">-${parseFloat(r[3]).toLocaleString()} ${r[4]}</span></div>`).join('')
+    : '<div class="empty-state" style="padding:1rem;">本月無其他支出</div>';
+
+  document.getElementById('reportContent').style.display='block';
+  document.getElementById('reportEmpty').style.display='none';
+}
+
+// ── Recent list ──────────────────────────────────────────
+function addRecent(entry){
+  recentEntries.unshift(entry);
+  if(recentEntries.length>8) recentEntries=recentEntries.slice(0,8);
+  renderRecent();
+}
+
+function renderRecent(){
+  const sec  = document.getElementById('recentSection');
+  const list = document.getElementById('recentList');
+  sec.style.display = recentEntries.length ? 'block':'none';
+  list.innerHTML = recentEntries.map(e=>{
+    const tagCls = e.type==='income'?'tag-inc':e.type==='subscription'?'tag-sub':'tag-exp';
+    const tagTxt = e.type==='income'?'收入':e.type==='subscription'?'訂閱':'支出';
+    const amtCls = e.type==='income'?'amount-pos':e.type==='subscription'?'amount-sub':'amount-neg';
+    const sign   = e.type==='income'?'+':'-';
+    const meta   = e.type==='subscription'
+      ? `${e.company} · ${e.date} · ${e.card}`
+      : e.type==='income'
+      ? `${e.category||''} · ${e.date}`
+      : e.date;
+    const cycle = e.cycle ? `<div class="entry-cycle">${e.cycle}</div>`:'';
+    return `<div class="entry-row">
+      <div>
+        <div class="entry-name">${e.name}<span class="entry-tag ${tagCls}">${tagTxt}</span></div>
+        <div class="entry-meta">${meta}</div>
+      </div>
+      <div class="entry-right">
+        <div class="entry-amount ${amtCls}">${sign}${e.amount} ${e.currency}</div>
+        ${cycle}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearRecent(){ recentEntries=[]; renderRecent(); }
+
+function clearForms(){
+  ['s-name','s-company','s-date','s-amount','s-card',
+   'e-name','e-date','e-amount','e-note',
+   'i-source','i-date','i-amount','i-note'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value='';
+  });
+}
+
+// ── Toast ────────────────────────────────────────────────
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className='toast '+type;
+  clearTimeout(t._t);
+  setTimeout(()=>t.classList.add('show'),10);
+  t._t = setTimeout(()=>t.classList.remove('show'),3500);
+}
+</script>
+</body>
+</html>
